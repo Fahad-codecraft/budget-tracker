@@ -1,7 +1,11 @@
 
-import { Card } from '@/components/ui/card'
+import { CurrencyComboBox } from '@/components/CurrencyComboBox'
+import { Logo } from '@/components/Logo'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { currentUser } from '@clerk/nextjs/server'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import React from 'react'
 
@@ -25,8 +29,23 @@ const page = async () => {
       </div>
       <Separator />
       <Card className='w-full'>
-        
+        <CardHeader>
+          <CardTitle>Currency</CardTitle>
+          <CardDescription>Set your default currency for transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CurrencyComboBox />
+        </CardContent>
       </Card>
+      <Separator />
+      <Button className='w-full' asChild>
+        <Link href={"/"}>
+        I&apos;m done, take me to the dashboard
+        </Link>
+      </Button>
+      <div className="mt-8">
+        <Logo />
+      </div>
     </div>
   )
 }
