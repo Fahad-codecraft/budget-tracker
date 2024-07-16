@@ -31,13 +31,13 @@ model Category {
 model Transaction {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  updateAt  DateTime @default(now())
 
   amount      Float
   description String
-  date        String
+  date        DateTime
   userId      String
-  type        String @default("income")
+  type        String   @default("income")
 
   category     String
   categoryIcon String
