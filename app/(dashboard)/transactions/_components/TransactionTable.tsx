@@ -1,18 +1,20 @@
 "use client";
+
 import { DateToUTCDate } from "@/lib/helpers";
 import { useQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
-  SortingState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { GetTransactionHistoryResponseType } from "@/app/api/transactions-history/route";
 
 import {
   Table,
@@ -22,23 +24,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GetTransactionHistoryResponseType } from "@/app/api/transactions-history/route";
 import SkeletonWrapper from "@/components/SkeletonWrapper";
-import { DataTableColumnHeader } from "@/components/ColumnHeader";
 import { cn } from "@/lib/utils";
+import { DataTableColumnHeader } from "@/components/ColumnHeader";
 import { DataTableFacetedFilter } from "@/components/FacetedFilters";
 import { DataTableViewOptions } from "@/components/ColumnToggle";
 import { Button } from "@/components/ui/button";
+
 import { download, generateCsv, mkConfig } from "export-to-csv";
-import { DownloadIcon, MoreHorizontal, Trash } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DownloadIcon, MoreHorizontal, TrashIcon } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import DeleteTransactionDialog from "./DeleteTransactionDialog";
 
 interface Props {
@@ -46,73 +41,67 @@ interface Props {
   to: Date;
 }
 
-type TransactionHistoryRow = GetTransactionHistoryResponseType[0];
-
 const emptyData: any[] = [];
+
+type TransactionHistoryRow = GetTransactionHistoryResponseType[0];
 
 const columns: ColumnDef<TransactionHistoryRow>[] = [
   {
-    accessorKey: 'category',
+    accessorKey: "category",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Category' />
+      <DataTableColumnHeader column={column} title="Category" />
     ),
-
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id));
     },
-
     cell: ({ row }) => (
-      <div className='flex gap-2 capitalize'>
+      <div className="flex gap-2 capitalize">
         {row.original.categoryIcon}
-        <div className='capitalize'>{row.original.category}</div>
+        <div className="capitalize">
+          {row.original.category}
+        </div>
       </div>
     ),
   },
   {
-    accessorKey: 'description',
+    accessorKey: "description",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Description' />
+      <DataTableColumnHeader column={column} title="Description" />
     ),
-
     cell: ({ row }) => (
-      <div className='capitalize'>{row.original.description}</div>
+      <div className="capitalize">
+        {row.original.description}
+      </div>
     ),
   },
   {
-    accessorKey: 'date',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Date' />
-    ),
-
+    accessorKey: "date",
+    header: "Date",
     cell: ({ row }) => {
       const date = new Date(row.original.date);
-      // console.log(row.original.date);
-      const formattedDate = date.toLocaleDateString('default', {
-        timeZone: 'UTC',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
+      const formattedDate = date.toLocaleDateString("default", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
       });
-      return <div className='capitalize'>{formattedDate}</div>;
+      return <div className="text-muted-foreground">{formattedDate}</div>;
     },
   },
   {
-    accessorKey: 'type',
+    accessorKey: "type",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Type' />
+      <DataTableColumnHeader column={column} title="Type" />
     ),
-
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id));
     },
-
     cell: ({ row }) => (
       <div
         className={cn(
-          'capitalize rounded-lg text-center p-2',
-          row.original.type === 'income'
-            ? 'bg-emerald-400/10 text-emerald-500'
-            : 'bg-red-400/10 text-red-500'
+          "capitalize rounded-lg text-center p-2",
+          row.original.type === "income" && "bg-emerald-400/10 text-emerald-500",
+          row.original.type === "expense" && "bg-red-400/10 text-red-500"
         )}
       >
         {row.original.type}
@@ -120,42 +109,43 @@ const columns: ColumnDef<TransactionHistoryRow>[] = [
     ),
   },
   {
-    accessorKey: 'amount',
+    accessorKey: "amount",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Amount' />
+      <DataTableColumnHeader column={column} title="Amount" />
     ),
-
     cell: ({ row }) => (
-      <p className='text-md rounded-lg bg-gray-400/5 p-2 text-center font-medium'>
+      <p className="text-md rounded-lg bg-gray-400/5 p-2 text-center font-medium">
         {row.original.formattedAmount}
       </p>
     ),
   },
   {
-    id: 'actions',
+    id: "actions",
     enableHiding: false,
-    cell: ({ row }) => <RowActions transaction={row.original} />,
-  },
+    cell: ({ row }) => (
+      <RowActions transaction={row.original} />
+    ),
+  }
 ];
 
 const csvConfig = mkConfig({
-  fieldSeparator: ',',
-  decimalSeparator: '.',
+  fieldSeparator: ",",
+  decimalSeparator: ".",
   useKeysAsHeaders: true,
 });
 
-const TransactionTable =({ from, to }: Props) => {
+function TransactionTable({ from, to }: Props) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const history = useQuery<GetTransactionHistoryResponseType>({
-    queryKey: ["history", from, to],
+    queryKey: ["transactions", "history", from, to],
     queryFn: () =>
       fetch(
         `/api/transactions-history?from=${DateToUTCDate(
           from
         )}&to=${DateToUTCDate(to)}`
-      ).then((response) => response.json())
+      ).then(res => res.json()),
   });
 
   const handleExportCSV = (data: any[]) => {
@@ -167,11 +157,6 @@ const TransactionTable =({ from, to }: Props) => {
     data: history.data || emptyData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 5,
-      },
-    },
     state: {
       sorting,
       columnFilters,
@@ -185,13 +170,12 @@ const TransactionTable =({ from, to }: Props) => {
 
   const categoriesOptions = useMemo(() => {
     const categoriesMap = new Map();
-    history.data?.forEach((transaction) => {
+    history.data?.forEach(transaction => {
       categoriesMap.set(transaction.category, {
         value: transaction.category,
         label: `${transaction.categoryIcon} ${transaction.category}`,
       });
     });
-
     const uniqueCategories = new Set(categoriesMap.values());
     return Array.from(uniqueCategories);
   }, [history.data]);
@@ -221,9 +205,11 @@ const TransactionTable =({ from, to }: Props) => {
         <div className="flex flex-wrap gap-2">
           <Button
             variant={"outline"}
+            size={"sm"}
             className="ml-auto h-8 lg:flex"
             onClick={() => {
-              const data = table.getFilteredRowModel().rows.map((row) => ({
+              const data = table.getFilteredRowModel().rows.map(row =>
+              ({
                 category: row.original.category,
                 categoryIcon: row.original.categoryIcon,
                 description: row.original.description,
@@ -253,11 +239,11 @@ const TransactionTable =({ from, to }: Props) => {
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
-                    );
+                    )
                   })}
                 </TableRow>
               ))}
@@ -271,20 +257,14 @@ const TransactionTable =({ from, to }: Props) => {
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
@@ -294,16 +274,16 @@ const TransactionTable =({ from, to }: Props) => {
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
           <Button
-            variant={"outline"}
-            size={"sm"}
+            variant="outline"
+            size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
             Previous
           </Button>
           <Button
-            variant={"outline"}
-            size={"sm"}
+            variant="outline"
+            size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
@@ -319,6 +299,7 @@ export default TransactionTable;
 
 function RowActions({ transaction }: { transaction: TransactionHistoryRow }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   return (
     <>
       <DeleteTransactionDialog
@@ -336,17 +317,13 @@ function RowActions({ transaction }: { transaction: TransactionHistoryRow }) {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="flex items-center gap-2"
-            onSelect={() => {
-              setShowDeleteDialog((prev) => !prev);
-            }}
-          >
-            <Trash className="h-4 w-4 text-muted-foreground" />
+          <DropdownMenuItem className="flex items-center gap-2" onSelect={() => { setShowDeleteDialog(prev => !prev) }}>
+            <TrashIcon className="h-4 w-4 text-muted-foreground" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
+
       </DropdownMenu>
     </>
-  );
+  )
 }
