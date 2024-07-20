@@ -32,7 +32,7 @@ export const GET = async (request: Request) => {
 
 export type GetBalanceStatsResponseType = Awaited<ReturnType<typeof getBalanceStats>>
 
-export const getBalanceStats = async (userId: string, from: Date, to: Date) => {
+const getBalanceStats = async (userId: string, from: Date, to: Date) => {
   const totals = await prisma.transaction.groupBy({
     by: ["type"],
     where: {
