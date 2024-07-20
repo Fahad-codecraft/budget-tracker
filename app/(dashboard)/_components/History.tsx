@@ -16,7 +16,7 @@ import CountUp from "react-countup";
 const History = ({ userSettings }: { userSettings: UserSettings }) => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('month')
 
-  const [period, setPeriod] = useState<Period>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 })
+  const [period, setPeriod] = useState<Period>({ year: new Date().getFullYear(), month: new Date().getMonth() })
 
   const formatter = useMemo(() => {
     return GetFormatterForCurrency(userSettings.currency)
